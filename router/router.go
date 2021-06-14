@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
     "strconv"
+//    "runtime"
 //	"net/http/httputil"
 	"time"
 	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
@@ -57,7 +58,7 @@ func NewRouter(_lw *logwriter.LogWriter, _mode string, _file bool) (*Router, err
 	router.frontend = &http.Server{
 		Addr:         env.Config.Listen_addr,
 		TLSConfig:    router.tls_config,
-		ReadTimeout:  time.Second * 5,
+		ReadTimeout:  time.Hour * 1,
 		WriteTimeout: time.Hour * 1,
 		Handler:      mux,
 		ErrorLog:     log.New(router.lw, "", 0),
@@ -65,6 +66,8 @@ func NewRouter(_lw *logwriter.LogWriter, _mode string, _file bool) (*Router, err
 
     // Create metadata
     //router.md = new(metadata.Cp_metadata)
+
+    http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 10000
 
 	return router, nil
 }
@@ -74,6 +77,7 @@ func (router *Router) SetUpSFC() bool {
 }
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+//    fmt.Printf("# of GOROUTINES: %d\n", runtime.NumGoroutine())
     // Check if user is already authenticated
     if router.mode == "direct" {
         if !bauth.User_sessions_is_valid(req) {
