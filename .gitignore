@@ -15,5 +15,7 @@
 # vendor/
 bigfile
 conf.yml
-service.log
+*.log
+*.pprof
 certs
+main

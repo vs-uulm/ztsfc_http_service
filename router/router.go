@@ -12,6 +12,8 @@ import (
 	env "local.com/leobrada/ztsfc_http_pep/env"
     //metadata "local.com/leobrada/ztsfc_http_pep/metadata"
 	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
+    // PACKET ARRIVAL
+//    logrus "github.com/sirupsen/logrus"
 )
 
 type Router struct {
@@ -21,6 +23,8 @@ type Router struct {
     mode       string
     file       bool
 //    md         *metadata.Cp_metadata
+    // PACKET ARRIVAL
+    //requestReception *logrus.Logger
 }
 
 func NewRouter(_lw *logwriter.LogWriter, _mode string, _file bool) (*Router, error) {
@@ -38,13 +42,9 @@ func NewRouter(_lw *logwriter.LogWriter, _mode string, _file bool) (*Router, err
 		Certificates:           nil,
 		//ClientAuth:             tls.RequireAndVerifyClientCert,
 		ClientAuth:				tls.VerifyClientCertIfGiven,
-		ClientCAs: env.Config.CA_cert_pool_service_accepts_when_presented_by_ext,
+		ClientCAs: env.Config.CA_cert_pool_service_accepts_when_presented_by_int,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
-			// load a suitable certificate that is shown to clients according the request domain/TLS SNI
-            if cli.ServerName == env.Config.Sni {
-                return &env.Config.X509KeyPair_presented_by_service_to_ext, nil
-            }
-			return nil, fmt.Errorf("Error: Could not serve a suitable certificate for %s\n", cli.ServerName)
+            return &env.Config.X509KeyPair_presented_by_service_to_int, nil
 		},
 	}
 
@@ -66,6 +66,20 @@ func NewRouter(_lw *logwriter.LogWriter, _mode string, _file bool) (*Router, err
     // Create metadata
     //router.md = new(metadata.Cp_metadata)
 
+    // Packet arrival registrar
+    //router.requestReception = logrus.New()
+    //router.requestReception.SetLevel(logrus.InfoLevel)
+    //router.requestReception.SetFormatter(&logrus.JSONFormatter{})
+
+    // Open a file for the logger output
+//    requestReceptionLogfile, err := os.OpenFile("requests_times.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+//    if err != nil {
+//        log.Fatal(err)
+//    }
+
+    // Redirect the logger output to the file
+    //router.requestReception.SetOutput(requestReceptionLogfile)
+
 	return router, nil
 }
 
@@ -74,6 +88,7 @@ func (router *Router) SetUpSFC() bool {
 }
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+    //router.requestReception.Infof("%v", time.Now().UnixNano())
     // Check if user is already authenticated
     if router.mode == "direct" {
         if !bauth.User_sessions_is_valid(req) {
