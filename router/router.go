@@ -45,6 +45,10 @@ func NewRouter(_lw *logwriter.LogWriter, _mode string, _file bool) (*Router, err
 		ClientAuth:				tls.VerifyClientCertIfGiven,
 		ClientCAs: env.Config.CA_cert_pool_service_accepts_when_presented_by_int,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
+            if cli.ServerName == env.Config.Sni {
+                return &env.Config.X509KeyPair_presented_by_service_to_ext, nil
+            }
+
             return &env.Config.X509KeyPair_presented_by_service_to_int, nil
 		},
 	}
