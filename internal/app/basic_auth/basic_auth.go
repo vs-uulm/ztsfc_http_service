@@ -8,7 +8,7 @@ import (
 //    "crypto/tls"
     "time"
     "github.com/jtblin/go-ldap-client"
-    "github.com/dgrijalva/jwt-go"
+    "github.com/golang-jwt/jwt"
     "crypto/rsa"
     "crypto/x509"
     "encoding/pem"

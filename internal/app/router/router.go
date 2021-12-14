@@ -10,7 +10,7 @@ import (
 //	"net/http/httputil"
 	"time"
 	bauth "github.com/vs-uulm/ztsfc_http_service/internal/app/basic_auth"
-	env "github.com/vs-uulm/ztsfc_http_service/internal/app/env"
+	"github.com/vs-uulm/ztsfc_http_service/internal/app/config"
     //metadata "local.com/leobrada/ztsfc_http_pep/metadata"
 	logwriter "github.com/vs-uulm/ztsfc_http_service/internal/app/logwriter"
     // PACKET ARRIVAL
@@ -43,13 +43,13 @@ func NewRouter(_lw *logwriter.LogWriter, _mode string, _file bool) (*Router, err
 		Certificates:           nil,
 		//ClientAuth:             tls.RequireAndVerifyClientCert,
 		ClientAuth:				tls.VerifyClientCertIfGiven,
-		ClientCAs: env.Config.CA_cert_pool_service_accepts_when_presented_by_int,
+		ClientCAs: config.Config.CA_cert_pool_service_accepts_when_presented_by_int,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
-            if cli.ServerName == env.Config.Sni {
-                return &env.Config.X509KeyPair_presented_by_service_to_ext, nil
+            if cli.ServerName == config.Config.Sni {
+                return &config.Config.X509KeyPair_presented_by_service_to_ext, nil
             }
 
-            return &env.Config.X509KeyPair_presented_by_service_to_int, nil
+            return &config.Config.X509KeyPair_presented_by_service_to_int, nil
 		},
 	}
 
@@ -60,7 +60,7 @@ func NewRouter(_lw *logwriter.LogWriter, _mode string, _file bool) (*Router, err
 
 	// Setting Up the Frontend Server
 	router.frontend = &http.Server{
-		Addr:         env.Config.Listen_addr,
+		Addr:         config.Config.Listen_addr,
 		TLSConfig:    router.tls_config,
 		ReadTimeout:  time.Hour * 1,
 		WriteTimeout: time.Hour * 1,
@@ -180,7 +180,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 //		//logr.Log_writer.Log(fmt.Sprintf("    %s\n", service_to_add_name))
 //
 //		// Temporary Solution
-//		service_to_add := env.Config.Service_pool[service_to_add_name]
+//		service_to_add := config.Config.Service_pool[service_to_add_name]
 //		/*
 //		   req.Header.Add("service", service_to_add.Dst_url.String())
 //		*/
@@ -218,7 +218,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 //					0)}
 //		}
 //
-//		dest, ok := env.Config.Sf_pool[sf_to_add_name]
+//		dest, ok := config.Config.Sf_pool[sf_to_add_name]
 //		if !ok {
 //			w.WriteHeader(503)
 //			return
@@ -231,10 +231,10 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 //		proxy.Transport = &http.Transport{
 //			TLSClientConfig: &tls.Config{
 //				// TODO: Replace it by loading the cert for the first SF in the chain
-//				Certificates:       []tls.Certificate{env.Config.Sf_pool[sf_to_add_name].X509KeyPair_shown_by_pep_to_sf},
+//				Certificates:       []tls.Certificate{config.Config.Sf_pool[sf_to_add_name].X509KeyPair_shown_by_pep_to_sf},
 //				InsecureSkipVerify: true,
 //				ClientAuth:         tls.RequireAndVerifyClientCert,
-//				ClientCAs:          env.Config.CA_cert_pool_pep_accepts_from_int,
+//				ClientCAs:          config.Config.CA_cert_pool_pep_accepts_from_int,
 //			},
 //		}
 //
@@ -243,7 +243,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 //		//logr.Log_writer.Log("    -\n")
 //		//logr.Log_writer.Log("[ Service ]\n")
 //		//logr.Log_writer.Log(fmt.Sprintf("    %s\n", service_to_add_name))
-//		for _, service := range env.Config.Service_pool {
+//		for _, service := range config.Config.Service_pool {
 //			//		if req.TLS.ServerName == service.SNI {
 //			//			proxy = httputil.NewSingleHostReverseProxy(service.Dst_url)
 //			if req.TLS.ServerName == service.Sni {
@@ -253,10 +253,10 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 //				// TODO: MOVE TO A BETTER PLACE
 //				proxy.Transport = &http.Transport{
 //					TLSClientConfig: &tls.Config{
-//						Certificates:       []tls.Certificate{env.Config.Service_pool[service_to_add_name].X509KeyPair_shown_by_pep_to_service},
+//						Certificates:       []tls.Certificate{config.Config.Service_pool[service_to_add_name].X509KeyPair_shown_by_pep_to_service},
 //						InsecureSkipVerify: true,
 //						ClientAuth:         tls.RequireAndVerifyClientCert,
-//						ClientCAs:          env.Config.CA_cert_pool_pep_accepts_from_int,
+//						ClientCAs:          config.Config.CA_cert_pool_pep_accepts_from_int,
 //					},
 //				}
 //			} else {

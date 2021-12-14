@@ -39,7 +39,7 @@ func init() {
 	sinit.SetupCloseHandler(lw)
 
 	// Loading all config parameter from config file defined in "conf_file_path"
-	err := env.LoadConfig(conf_file_path, lw)
+	err := config.LoadConfig(conf_file_path, lw)
 	if err != nil {
 		sysLogger.Fatalf("Loading logger configuration from %s - ERROR: %v", conf_file_path, err)
 	} else {
@@ -47,8 +47,8 @@ func init() {
 	}
 
 	// Create Certificate Pools for the CA certificates used by the PEP
-	env.Config.CA_cert_pool_service_accepts_when_presented_by_ext = x509.NewCertPool()
-	env.Config.CA_cert_pool_service_accepts_when_presented_by_int = x509.NewCertPool()
+	config.Config.CA_cert_pool_service_accepts_when_presented_by_ext = x509.NewCertPool()
+	config.Config.CA_cert_pool_service_accepts_when_presented_by_int = x509.NewCertPool()
 
 	// Load all CA certificates
 	err = sinit.LoadServiceCerts(lw)
