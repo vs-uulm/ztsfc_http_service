@@ -4,7 +4,7 @@ import (
 	"crypto/x509"
 	"flag"
 	"net/http"
-	env "github.com/vs-uulm/ztsfc_http_service/internal/app/env"
+    "github.com/vs-uulm/ztsfc_http_service/internal/app/config"
 	sinit "github.com/vs-uulm/ztsfc_http_service/internal/app/init"
 	router "github.com/vs-uulm/ztsfc_http_service/internal/app/router"
 	logwriter "github.com/vs-uulm/ztsfc_http_service/internal/app/logwriter"
