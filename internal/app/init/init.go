@@ -1,8 +1,8 @@
 package init
 
 import (
-	env "github.com/vs-uulm/ztsfc_http_service/tree/main/internal/app/env"
-	logwriter "github.com/vs-uulm/ztsfc_http_service/tree/main/internal/app/logwriter"
+	env "github.com/vs-uulm/ztsfc_http_service/internal/app/env"
+	logwriter "github.com/vs-uulm/ztsfc_http_service/internal/app/logwriter"
 	"crypto/tls"
 	"io/ioutil"
 	"os"

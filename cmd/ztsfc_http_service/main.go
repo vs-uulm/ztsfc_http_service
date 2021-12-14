@@ -4,10 +4,10 @@ import (
 	"crypto/x509"
 	"flag"
 	"net/http"
-	env "local.com/leobrada/ztsfc_http_pep/env"
-	sinit "local.com/leobrada/ztsfc_http_pep/init"
-	router "local.com/leobrada/ztsfc_http_pep/router"
-	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
+	env "github.com/vs-uulm/ztsfc_http_service/internal/app/env"
+	sinit "github.com/vs-uulm/ztsfc_http_service/internal/app/init"
+	router "github.com/vs-uulm/ztsfc_http_service/internal/app/router"
+	logwriter "github.com/vs-uulm/ztsfc_http_service/internal/app/logwriter"
 	"github.com/sirupsen/logrus"
 )
 
