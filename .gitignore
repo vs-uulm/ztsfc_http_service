@@ -17,5 +17,6 @@ bigfile
 conf.yml
 *.log
 *.pprof
-certs
 main
+certs/*
+!certs/.gitkeep
