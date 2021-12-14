@@ -7,7 +7,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"os"
 
-	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
+	logwriter ""
 //    github.com/vs-uulm/ztsfc_http_pdp/internal/app/
 )
 

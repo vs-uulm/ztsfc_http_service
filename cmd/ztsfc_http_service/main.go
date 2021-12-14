@@ -26,7 +26,7 @@ var (
 func init() {
     flag.StringVar(&mode, "m", "direct", "Specifies the operation mode; either 'direct' or 'pep'")
     flag.BoolVar(&file, "f", false, "Specifies if the service should serve a file or not")
-	flag.StringVar(&conf_file_path, "c", "./conf.yml", "Path to user defined yml config file")
+	flag.StringVar(&conf_file_path, "c", "./config/conf.yml", "Path to user defined yml config file")
 	flag.StringVar(&log_file_path, "l", "./service.log", "Path to log file")
     flag.StringVar(&log_level, "log-level", "error", "Log level from the next set: debug, info, warning, error")
     flag.BoolVar(&ifTextFormatter, "text", false, "Use a text format instead of JSON to log messages")
