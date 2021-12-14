@@ -1,8 +1,8 @@
 package init
 
 import (
-	env "local.com/leobrada/ztsfc_http_pep/env"
-	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
+	env "github.com/vs-uulm/ztsfc_http_service/tree/main/internal/app/env"
+	logwriter "github.com/vs-uulm/ztsfc_http_service/tree/main/internal/app/logwriter"
 	"crypto/tls"
 	"io/ioutil"
 	"os"

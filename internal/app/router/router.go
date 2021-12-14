@@ -9,10 +9,10 @@ import (
 //    "runtime"
 //	"net/http/httputil"
 	"time"
-	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
-	env "local.com/leobrada/ztsfc_http_pep/env"
+	bauth "github.com/vs-uulm/ztsfc_http_service/tree/main/internal/app/basic_auth"
+	env "github.com/vs-uulm/ztsfc_http_service/tree/main/internal/app/env"
     //metadata "local.com/leobrada/ztsfc_http_pep/metadata"
-	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
+	logwriter "github.com/vs-uulm/ztsfc_http_service/tree/main/internal/app/logwriter"
     // PACKET ARRIVAL
 //    logrus "github.com/sirupsen/logrus"
 )
