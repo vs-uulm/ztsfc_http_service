@@ -5,52 +5,47 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-    "strconv"
-//    "runtime"
-//	"net/http/httputil"
+	"strconv"
+
+	//    "runtime"
+	//	"net/http/httputil"
 	"time"
+
+	logger "github.com/vs-uulm/ztsfc_http_logger"
 	bauth "github.com/vs-uulm/ztsfc_http_service/internal/app/basic_auth"
 	"github.com/vs-uulm/ztsfc_http_service/internal/app/config"
-    //metadata "local.com/leobrada/ztsfc_http_pep/metadata"
-	logwriter "github.com/vs-uulm/ztsfc_http_service/internal/app/logwriter"
-    // PACKET ARRIVAL
-//    logrus "github.com/sirupsen/logrus"
+	//metadata "local.com/leobrada/ztsfc_http_pep/metadata"
+	// PACKET ARRIVAL
+	//    logrus "github.com/sirupsen/logrus"
 )
 
 type Router struct {
-	tls_config *tls.Config
-	frontend   *http.Server
-	lw         *logwriter.LogWriter
-    mode       string
-    file       bool
-//    md         *metadata.Cp_metadata
-    // PACKET ARRIVAL
-    //requestReception *logrus.Logger
+	tlsConfig *tls.Config
+	frontend  *http.Server
+	sysLogger *logger.Logger
+	mode      string
+	file      bool
+	//    md         *metadata.Cp_metadata
+	// PACKET ARRIVAL
+	//requestReception *logrus.Logger
 }
 
-func NewRouter(_lw *logwriter.LogWriter, _mode string, _file bool) (*Router, error) {
+func NewRouter(logger *logger.Logger, mode string, file bool) (*Router, error) {
 	router := new(Router)
-	router.lw = _lw
-    router.mode = _mode
-    router.file = _file
+	router.sysLogger = logger
+	router.mode = mode
+	router.file = file
 
-	router.tls_config = &tls.Config{
+	// Create a tls.Config struct to accept incoming connections
+	router.tlsConfig = &tls.Config{
 		Rand:                   nil,
 		Time:                   nil,
 		MinVersion:             tls.VersionTLS13,
 		MaxVersion:             tls.VersionTLS13,
-		SessionTicketsDisabled: true,
-		Certificates:           nil,
-		//ClientAuth:             tls.RequireAndVerifyClientCert,
-		ClientAuth:				tls.VerifyClientCertIfGiven,
-		ClientCAs: config.Config.CA_cert_pool_service_accepts_when_presented_by_int,
-		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
-            if cli.ServerName == config.Config.Sni {
-                return &config.Config.X509KeyPair_presented_by_service_to_ext, nil
-            }
-
-            return &config.Config.X509KeyPair_presented_by_service_to_int, nil
-		},
+		SessionTicketsDisabled: false,
+		Certificates:           []tls.Certificate{config.Config.X509KeyPairShownByService},
+		ClientAuth:             tls.RequireAndVerifyClientCert,
+		ClientCAs:              config.Config.CAcertPoolPepAcceptsFromExt,
 	}
 
 	// Frontend Handlers
@@ -60,30 +55,30 @@ func NewRouter(_lw *logwriter.LogWriter, _mode string, _file bool) (*Router, err
 
 	// Setting Up the Frontend Server
 	router.frontend = &http.Server{
-		Addr:         config.Config.Listen_addr,
-		TLSConfig:    router.tls_config,
+		Addr:         config.Config.Service.ListenAddr,
+		TLSConfig:    router.tlsConfig,
 		ReadTimeout:  time.Hour * 1,
 		WriteTimeout: time.Hour * 1,
 		Handler:      mux,
-		ErrorLog:     log.New(router.lw, "", 0),
+		ErrorLog:     log.New(router.sysLogger.GetWriter(), "", 0),
 	}
 
-    // Create metadata
-    //router.md = new(metadata.Cp_metadata)
+	// Create metadata
+	//router.md = new(metadata.Cp_metadata)
 
-    // Packet arrival registrar
-    //router.requestReception = logrus.New()
-    //router.requestReception.SetLevel(logrus.InfoLevel)
-    //router.requestReception.SetFormatter(&logrus.JSONFormatter{})
+	// Packet arrival registrar
+	//router.requestReception = logrus.New()
+	//router.requestReception.SetLevel(logrus.InfoLevel)
+	//router.requestReception.SetFormatter(&logrus.JSONFormatter{})
 
-    // Open a file for the logger output
-//    requestReceptionLogfile, err := os.OpenFile("requests_times.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-//    if err != nil {
-//        log.Fatal(err)
-//    }
+	// Open a file for the logger output
+	//    requestReceptionLogfile, err := os.OpenFile("requests_times.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	//    if err != nil {
+	//        log.Fatal(err)
+	//    }
 
-    // Redirect the logger output to the file
-    //router.requestReception.SetOutput(requestReceptionLogfile)
+	// Redirect the logger output to the file
+	//router.requestReception.SetOutput(requestReceptionLogfile)
 
 	return router, nil
 }
@@ -93,23 +88,23 @@ func (router *Router) SetUpSFC() bool {
 }
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-    //router.requestReception.Infof("%v", time.Now().UnixNano())
-    // Check if user is already authenticated
-    if router.mode == "direct" {
-        if !bauth.User_sessions_is_valid(req) {
-            if !bauth.Basic_auth(w, req) {
-                return
-            }
-        }
-    }
+	//router.requestReception.Infof("%v", time.Now().UnixNano())
+	// Check if user is already authenticated
+	if router.mode == "direct" {
+		if !bauth.User_sessions_is_valid(req) {
+			if !bauth.Basic_auth(w, req) {
+				return
+			}
+		}
+	}
 
-    if !router.file {
-        fmt.Fprintf(w, "1")
-    } else {
-        w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote("bigfile"))
-        w.Header().Set("Content-Type", "application/octet-stream")
-        http.ServeFile(w, req, "./bigfile")
-    }
+	if !router.file {
+		fmt.Fprintf(w, "1")
+	} else {
+		w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote("bigfile"))
+		w.Header().Set("Content-Type", "application/octet-stream")
+		http.ServeFile(w, req, "./bigfile")
+	}
 }
 
 //func (router *Router) ServeFileDownload(w http.ResponseWriter, req *http.Request) {
@@ -124,7 +119,6 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 //    w.Header().Set("Content-Type", "application/octet-stream")
 //    http.ServeFile(w, req, "./README.md")
 //}
-
 
 //func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 //	// Log all http requests incl. TLS information

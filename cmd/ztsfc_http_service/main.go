@@ -3,75 +3,67 @@ package main
 import (
 	"crypto/x509"
 	"flag"
+	"log"
 	"net/http"
-    "github.com/vs-uulm/ztsfc_http_service/internal/app/config"
-	sinit "github.com/vs-uulm/ztsfc_http_service/internal/app/init"
+
+	logger "github.com/vs-uulm/ztsfc_http_logger"
+	"github.com/vs-uulm/ztsfc_http_service/internal/app/config"
+	confInit "github.com/vs-uulm/ztsfc_http_service/internal/app/init"
 	router "github.com/vs-uulm/ztsfc_http_service/internal/app/router"
-	logwriter "github.com/vs-uulm/ztsfc_http_service/internal/app/logwriter"
-	"github.com/sirupsen/logrus"
 )
 
 var (
-    mode string
-    file bool
-	conf_file_path string
-	log_file_path string
-	log_level string
-	ifTextFormatter bool
-
-	// An instance of logwriter based on logrus
-	lw *logwriter.LogWriter
+	confFilePath string
+	sysLogger    *logger.Logger
 )
 
 func init() {
-    flag.StringVar(&mode, "m", "direct", "Specifies the operation mode; either 'direct' or 'pep'")
-    flag.BoolVar(&file, "f", false, "Specifies if the service should serve a file or not")
-	flag.StringVar(&conf_file_path, "c", "./config/conf.yml", "Path to user defined yml config file")
-	flag.StringVar(&log_file_path, "l", "./service.log", "Path to log file")
-    flag.StringVar(&log_level, "log-level", "error", "Log level from the next set: debug, info, warning, error")
-    flag.BoolVar(&ifTextFormatter, "text", false, "Use a text format instead of JSON to log messages")
+	var err error
 
 	// Operating input parameters
+	flag.StringVar(&confFilePath, "c", "", "Path to user defined YML config file")
 	flag.Parse()
 
-	lw = logwriter.New(log_file_path, log_level, ifTextFormatter)
-	sysLogger := lw.Logger.WithFields(logrus.Fields{"type": "system"})
-	sinit.SetupCloseHandler(lw)
-
-	// Loading all config parameter from config file defined in "conf_file_path"
-	err := config.LoadConfig(conf_file_path, lw)
+	// Loading all config parameter from config file defined in "confFilePath"
+	err = config.LoadConfig(confFilePath)
 	if err != nil {
-		sysLogger.Fatalf("Loading logger configuration from %s - ERROR: %v", conf_file_path, err)
-	} else {
-		sysLogger.Debugf("Loading logger configuration from %s - OK", conf_file_path)
+		log.Fatal(err)
 	}
 
-	// Create Certificate Pools for the CA certificates used by the PEP
-	config.Config.CA_cert_pool_service_accepts_when_presented_by_ext = x509.NewCertPool()
-	config.Config.CA_cert_pool_service_accepts_when_presented_by_int = x509.NewCertPool()
-
-	// Load all CA certificates
-	err = sinit.LoadServiceCerts(lw)
+	// Create an instance of the system logger
+	confInit.InitSysLoggerParams()
+	sysLogger, err = logger.New(config.Config.SysLogger.LogFilePath,
+		config.Config.SysLogger.LogLevel,
+		config.Config.SysLogger.LogFormatter,
+		logger.Fields{"type": "system"},
+	)
 	if err != nil {
-		sysLogger.Fatalf("Loading service certificates - ERROR: %v", err)
-	} else {
-		sysLogger.WithFields(logrus.Fields{"type":"system"}).Debug("Loading service certificates - OK")
+		log.Fatal(err)
+	}
+	sysLogger.Debugf("loading logger configuration from %s - OK", confFilePath)
+
+	// Create Certificate Pools for the CA certificates used by the service
+	config.Config.CAcertPoolPepAcceptsFromExt = x509.NewCertPool()
+
+	// service
+	err = confInit.InitServiceParams(sysLogger)
+	if err != nil {
+		sysLogger.Fatal(err)
 	}
 }
 
 func main() {
 	// Create new Service router
-	r, err := router.NewRouter(lw, mode, file)
+	r, err := router.NewRouter(sysLogger, config.Config.Service.Mode, config.Config.Service.File)
 	if err != nil {
-		lw.Logger.Fatalf("Fatal error during new router creation: %v", err)
-	} else {
-		lw.Logger.WithFields(logrus.Fields{"type":"system"}).Debug("New router is successfully created")
+		sysLogger.Fatalf("main: unable to create a new router: %w", err)
 	}
+	sysLogger.Debug("main: new router was successfully created")
 
 	http.Handle("/", r)
 
 	err = r.ListenAndServeTLS()
 	if err != nil {
-		lw.Logger.Fatalf("ListenAndServeTLS Fatal Error: %v", err)
+		sysLogger.Fatalf("main: ListenAndServeTLS() fatal error: %w", err)
 	}
 }
