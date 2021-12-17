@@ -40,7 +40,7 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	sysLogger.Debugf("loading logger configuration from %s - OK", confFilePath)
+	sysLogger.Debugf("loading logger configuration from '%s' - OK", confFilePath)
 
 	// Create Certificate Pools for the CA certificates used by the service
 	config.Config.CAcertPoolPepAcceptsFromExt = x509.NewCertPool()
@@ -53,17 +53,18 @@ func init() {
 }
 
 func main() {
-	// Create new Service router
-	r, err := router.NewRouter(sysLogger, config.Config.Service.Mode, config.Config.Service.File)
+	// Create a new Service router
+	serviceRouter, err := router.NewRouter(sysLogger, config.Config.Service.Mode, config.Config.Service.File)
 	if err != nil {
-		sysLogger.Fatalf("main: unable to create a new router: %w", err)
+		sysLogger.Error(err)
+		return
 	}
 	sysLogger.Debug("main: new router was successfully created")
 
-	http.Handle("/", r)
+	http.Handle("/", serviceRouter)
 
-	err = r.ListenAndServeTLS()
+	err = serviceRouter.ListenAndServeTLS()
 	if err != nil {
-		sysLogger.Fatalf("main: ListenAndServeTLS() fatal error: %w", err)
+		sysLogger.Error(err)
 	}
 }

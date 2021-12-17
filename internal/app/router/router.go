@@ -88,7 +88,6 @@ func (router *Router) SetUpSFC() bool {
 }
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	//router.requestReception.Infof("%v", time.Now().UnixNano())
 	// Check if user is already authenticated
 	if router.mode == "direct" {
 		if !bauth.User_sessions_is_valid(req) {

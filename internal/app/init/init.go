@@ -88,10 +88,10 @@ func InitServiceParams(sysLogger *logger.Logger) error {
 func loadX509KeyPair(sysLogger *logger.Logger, certfile, keyfile, componentName, certAttr string) (tls.Certificate, error) {
 	keyPair, err := tls.LoadX509KeyPair(certfile, keyfile)
 	if err != nil {
-		return tls.Certificate{}, fmt.Errorf("init: loadX509KeyPair(): loading %s X509KeyPair for %s from %s and %s - FAIL: %v",
+		return tls.Certificate{}, fmt.Errorf("init: loadX509KeyPair(): loading %s X509KeyPair for %s from '%s' and '%s' - FAIL: %v",
 			certAttr, componentName, certfile, keyfile, err)
 	}
-	sysLogger.Debugf("init: loadX509KeyPair(): loading %s X509KeyPair for %s from %s and %s - OK", certAttr, componentName, certfile, keyfile)
+	sysLogger.Debugf("init: loadX509KeyPair(): loading %s X509KeyPair for %s from '%s' and '%s' - OK", certAttr, componentName, certfile, keyfile)
 	return keyPair, nil
 }
 
