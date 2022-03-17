@@ -11,4 +11,4 @@ EXPOSE 443/tcp
 
 ADD main /main                                                                          
 
-CMD /main -m pep
+CMD /main

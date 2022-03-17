@@ -23,18 +23,19 @@ type Router struct {
 	tlsConfig *tls.Config
 	frontend  *http.Server
 	sysLogger *logger.Logger
-	mode      string
-	file      bool
+//	mode      string
+//	file      bool
 	//    md         *metadata.Cp_metadata
 	// PACKET ARRIVAL
 	//requestReception *logrus.Logger
 }
 
+//func NewRouter(logger *logger.Logger, mode string, file bool) (*Router, error) {
 func NewRouter(logger *logger.Logger, mode string, file bool) (*Router, error) {
 	router := new(Router)
 	router.sysLogger = logger
-	router.mode = mode
-	router.file = file
+//	router.mode = mode
+//	router.file = file
 
 	// Create a tls.Config struct to accept incoming connections
 	router.tlsConfig = &tls.Config{
@@ -89,7 +90,7 @@ func (router *Router) SetUpSFC() bool {
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Check if user is already authenticated
-	if router.mode == "direct" {
+	if config.Config.Service.Mode == "direct" {
 		if !bauth.User_sessions_is_valid(req) {
 			if !bauth.Basic_auth(w, req) {
 				return
@@ -97,7 +98,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	if !router.file {
+	if !config.Config.Service.File {
 		fmt.Fprintf(w, "1")
 	} else {
 		w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote("bigfile"))
