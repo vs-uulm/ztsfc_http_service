@@ -1,10 +1,12 @@
-sni: service.example.de
-listen_addr: ":443"
-certs_service_accepts_when_presented_by_ext: 
-  - ./certs/example_root.crt
-certs_service_accepts_when_presented_by_int:
-  - ./certs/example_root.crt
-cert_presented_by_service_to_ext_matching_sni: /etc/letsencrypt/live/service.example.de/fullchain.pem
-privkey_for_cert_presented_by_service_to_ext: /etc/letsencrypt/live/service.example.de/privkey.pem
-cert_presented_by_service_to_int: ./certs/server.crt
-privkey_for_cert_presented_by_service_to_int: ./certs/private.key
+system_logger:
+  system_logger_logging_level: debug
+  system_logger_destination: stdout
+  system_logger_format: text
+
+service:
+  listen_addr: ":443"
+  cert_shown_by_service_to_clients: ./certs/cert.crt
+  privkey_for_cert_shown_by_service_to_clients: ./certs/cert.key
+  cert_service_accepts: ./certs/cert.crt
+  mode: direct
+  file: false

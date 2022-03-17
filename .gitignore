@@ -17,6 +17,9 @@ bigfile
 conf.yml
 *.log
 *.pprof
-main
+/main
 certs/*
 !certs/.gitkeep
+
+# VSCode config
+/.vscode
