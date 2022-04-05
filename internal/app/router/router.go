@@ -44,9 +44,9 @@ func NewRouter(logger *logger.Logger, mode string, file bool) (*Router, error) {
 		MinVersion:             tls.VersionTLS13,
 		MaxVersion:             tls.VersionTLS13,
 		SessionTicketsDisabled: false,
-		Certificates:           []tls.Certificate{config.Config.X509KeyPairShownByService},
+		Certificates:           []tls.Certificate{config.Config.Service.X509KeyPairShownByService},
 		ClientAuth:             tls.RequireAndVerifyClientCert,
-		ClientCAs:              config.Config.CAcertPoolPepAcceptsFromExt,
+		ClientCAs:              config.Config.Service.CAcertPoolServiceAcceptsFromExt,
 	}
 
 	// Frontend Handlers
@@ -91,8 +91,13 @@ func (router *Router) SetUpSFC() bool {
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Check if user is already authenticated
 	if config.Config.Service.Mode == "direct" {
-		if !bauth.User_sessions_is_valid(req) {
-			if !bauth.Basic_auth(w, req) {
+        if config.Config.BasicAuth.Perimeter.ApplyPerimeter && bauth.FilteredByPerimter(req) {
+            router.sysLogger.Infof("Request from '%s' has been dropped due to a perimeter filter rule", req.RemoteAddr)
+            return
+        }
+
+		if !bauth.UserSessionsIsValid(req) {
+			if !bauth.BasicAuth(router.sysLogger, w, req) {
 				return
 			}
 		}

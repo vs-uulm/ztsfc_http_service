@@ -1,31 +1,30 @@
 package main
 
 import (
-	"crypto/x509"
 	"flag"
 	"log"
 	"net/http"
 
-	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_service/internal/app/config"
+	logger "github.com/vs-uulm/ztsfc_http_logger"
 	confInit "github.com/vs-uulm/ztsfc_http_service/internal/app/init"
 	router "github.com/vs-uulm/ztsfc_http_service/internal/app/router"
+    yaml "github.com/leobrada/yaml_tools"
 )
 
 var (
-	confFilePath string
 	sysLogger    *logger.Logger
 )
 
 func init() {
-	var err error
+	var confFilePath string
 
 	// Operating input parameters
 	flag.StringVar(&confFilePath, "c", "./config/conf.yml", "Path to user defined YML config file")
 	flag.Parse()
 
 	// Loading all config parameter from config file defined in "confFilePath"
-	err = config.LoadConfig(confFilePath)
+    err := yaml.LoadYamlFile(confFilePath, &config.Config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -42,14 +41,9 @@ func init() {
 	}
 	sysLogger.Debugf("loading logger configuration from '%s' - OK", confFilePath)
 
-	// Create Certificate Pools for the CA certificates used by the service
-	config.Config.CAcertPoolPepAcceptsFromExt = x509.NewCertPool()
-
-	// service
-	err = confInit.InitServiceParams(sysLogger)
-	if err != nil {
-		sysLogger.Fatal(err)
-	}
+    if err = confInit.InitConfig(sysLogger); err != nil {
+        sysLogger.Fatalf("main: init(): could not initialize Service params: %v", err)
+    }
 }
 
 func main() {

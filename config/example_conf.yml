@@ -10,3 +10,29 @@ service:
   cert_service_accepts: ./certs/cert.crt
   mode: direct
   file: false
+
+basic_auth:
+  session:
+    path_to_jwt_pub_key: "./certs/jwt_test_pub.pem"
+    path_to_jwt_signing_key: "./certs/jwt_test_priv.pem"
+
+ ldap:
+   base: "dc=example,dc=com"
+   host: "ldap.ztsfc.com"
+   port: 636
+   readonly_dn: "cn=readonly,dc=ztsfc,dc=com"
+   readonly_pw: "readonlypa$$w0rd"
+   user_filter: "(&(cn=%s))"
+   attributes:
+     - "givenName"
+     - "sn"
+     - "mail"
+     - "uid"
+   cert_shown_by_serive_to_ldap: ./certs/example_http_service.crt
+   privkey_for_cert_shown_by_service_to_ldap: ./certs/example_http_service_priv.key
+   cert_service_accepts_shown_by_ldap: ./certs/root_CA.crt
+
+  perimeter:
+    apply_perimeter: true
+    trusted_locations:
+      - "1.1.0.0/16"

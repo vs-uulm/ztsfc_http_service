@@ -1,76 +1,37 @@
 package basic_auth
 
 import (
+    "net"
 	"net/http"
-	//    "net/http/httputil"
-	//    "net/url"
 	"fmt"
-	//    "crypto/tls"
 	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
-	"io/ioutil"
 	"time"
 
+    "gopkg.in/ldap.v2"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/jtblin/go-ldap-client"
-	//    env "local.com/leobrada/ztsfc_http_pep/env"
-	//    metadata "local.com/leobrada/ztsfc_http_pep/metadata"
+    "github.com/vs-uulm/ztsfc_http_service/internal/app/config"
+    logger "github.com/vs-uulm/ztsfc_http_logger"
 )
 
-func User_sessions_is_valid(req *http.Request) bool {
-	ztsfc_cookie, err := req.Cookie("ztsfc_session")
+func UserSessionsIsValid(req *http.Request) bool {
+	jwtCookie, err := req.Cookie("ztsfc_session")
 	if err != nil {
 		return false
 	}
-	ss := ztsfc_cookie.Value
+	ss := jwtCookie.Value
 
 	_, err = jwt.Parse(ss, func(token *jwt.Token) (interface{}, error) {
-		return parseRsaPublicKeyFromPemStr("./certs/jwt_test_pub.pem"), nil
+		return config.Config.BasicAuth.Session.JwtPubKey, nil
 	})
 
 	return err == nil
 }
 
-func Basic_auth(w http.ResponseWriter, req *http.Request) bool {
-
-	return perform_passwd_auth(w, req)
-
-	//    basic_auth_url, _ := url.Parse("https://10.4.0.52")
-	//	proxy := httputil.NewSingleHostReverseProxy(basic_auth_url)
-	//
-	//    // When the PEP is acting as a client; this defines his behavior
-	//    proxy.Transport = &http.Transport{
-	//        TLSClientConfig: &tls.Config{
-	//            Certificates:       []tls.Certificate{env.Config.X509KeyPair_presented_by_service_to_int},
-	//            InsecureSkipVerify: true,
-	//            ClientAuth:         tls.RequireAndVerifyClientCert,
-	//            ClientCAs:          env.Config.CA_cert_pool_service_accepts_when_presented_by_int,
-	//        },
-	//    }
-	//
-	//    proxy.ServeHTTP(w, req)
-
-	//    if perform_x509_auth(w, req) {
-	//        return true
-	//    }
-	//
-	//    if perform_passwd_auth(w, req) {
-	//        return true
-	//    }
-
-	// return false
+func BasicAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request) bool {
+	return performPasswdAuth(sysLogger, w, req)
 }
 
-// func perform_x509_auth(w http.ResponseWriter, req *http.Request) bool {
-// 	// Check if a verified client certificate is present
-// 	if len(req.TLS.VerifiedChains) > 0 {
-// 		return true
-// 	}
-// 	return false
-// }
-
-func perform_passwd_auth(w http.ResponseWriter, req *http.Request) bool {
+func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request) bool {
 	var username, password string
 
 	// TODO: Check for JW Token initially
@@ -102,20 +63,18 @@ func perform_passwd_auth(w http.ResponseWriter, req *http.Request) bool {
 			return false
 		}
 
-		if !userIsInLDAP(username, password) {
+		if !areUserLDAPCredentialsValid(sysLogger, username, password) {
 			handleFormReponse("Authentication failed for user", w)
 			return false
 		}
 
 		// Create JWT
-		mySigningKey := parseRsaPrivateKeyFromPemStr("./certs/jwt_test_priv.pem")
-		ss := createJWToken(mySigningKey)
-		//fmt.Println(ss)
+		ss := createJWToken(config.Config.BasicAuth.Session.MySigningKey, username)
 
 		ztsfc_cookie := http.Cookie{
 			Name:   "ztsfc_session",
 			Value:  ss,
-			MaxAge: 36000,
+			MaxAge: 1800,
 			Path:   "/",
 		}
 		http.SetCookie(w, &ztsfc_cookie)
@@ -123,7 +82,7 @@ func perform_passwd_auth(w http.ResponseWriter, req *http.Request) bool {
 		// TODO: make it user configurable
 		// TODO: is there a better solution for the content-length  /body length "bug"?
 		req.ContentLength = 0
-		http.Redirect(w, req, "https://service1.testbed.informatik.uni-ulm.de"+req.URL.String(), http.StatusSeeOther) // 303
+		http.Redirect(w, req, "https://"+req.Host+req.URL.String(), http.StatusSeeOther) // 303
 		return true
 
 	} else {
@@ -153,11 +112,11 @@ func handleFormReponse(msg string, w http.ResponseWriter) {
 	fmt.Fprint(w, form)
 }
 
-func createJWToken(mySigningKey *rsa.PrivateKey) string {
+func createJWToken(mySigningKey *rsa.PrivateKey, username string) string {
 	claims := &jwt.StandardClaims{
 		ExpiresAt: time.Now().Add(time.Hour * 1).Unix(),
-		Issuer:    "alex",
-		Subject:   "hello",
+		Issuer:    "ztsfc_bauth",
+		Subject:   username,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
@@ -166,75 +125,85 @@ func createJWToken(mySigningKey *rsa.PrivateKey) string {
 	return ss
 }
 
-func parseRsaPrivateKeyFromPemStr(privPEMlocation string) *rsa.PrivateKey {
-	priv_read_in, err := ioutil.ReadFile(privPEMlocation)
-	if err != nil {
-		fmt.Printf("Could not read from file.\n")
-		return nil
-	}
+// AreUserLDAPCredentialsValid() checks a user credentials by binding to the given LDAP server
+func areUserLDAPCredentialsValid(sysLogger *logger.Logger, userName, password string) bool {
+        // If a user with the given name exists, obtain their full LDAP dn
+        dn, ok := GetUserDNfromLDAP(sysLogger, userName)
+        if !ok {
+                sysLogger.Errorf("basic_auth: areUserLDAPCredentialsValid(): unable to find the user '%s'", userName)
+                return false
+        }
 
-	block, _ := pem.Decode(priv_read_in)
-	if block == nil {
-		fmt.Printf("Could not decode the read in block.\n")
-		return nil
-	}
+        // The user exists. Check user's password by binding to the LDAP database
+        err := config.Config.BasicAuth.Ldap.LdapConn.Bind(dn, password)
+        if err != nil {
+                // User's password does not match
+                sysLogger.Debugf("basic_auth: areUserLDAPCredentialsValid(): unable to bind with the given credentials (username='%s'): %s", userName, err.Error())
+                return false
+        }
 
-	priv, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		fmt.Printf("unable to parse the private key: %s\n", err.Error())
-		return nil
-	}
-
-	return priv.(*rsa.PrivateKey)
+        // Everything is ok
+        sysLogger.Debugf("basic_auth: areUserLDAPCredentialsValid(): credentials of the user '%s' are valid", userName)
+        return true
 }
 
-func userIsInLDAP(userName, password string) bool {
-	client := &ldap.LDAPClient{
-		Base:         "ou=people,dc=planetexpress,dc=com",
-		Host:         "10.4.0.52",
-		Port:         389,
-		UseSSL:       false,
-		BindDN:       "cn=admin,dc=planetexpress,dc=com",
-		BindPassword: "GoodNewsEveryone",
-		UserFilter:   "(uid=%s)",
-		GroupFilter:  "(memberUid=%s)",
-		Attributes:   []string{"givenName", "sn", "mail", "uid"},
-	}
-	// It is the responsibility of the caller to close the connection
-	defer client.Close()
+// GetUserDNfromLDAP() returns a user's full LDAP dn if the user's record exists in the database.
+func GetUserDNfromLDAP(sysLogger *logger.Logger, userName string) (string, bool) {
+        // Connect to the LDAP database with the readonly user credentials
+        err := config.Config.BasicAuth.Ldap.LdapConn.Bind(config.Config.BasicAuth.Ldap.ReadonlyDN, config.Config.BasicAuth.Ldap.ReadonlyPW)
+        if err != nil {
+                sysLogger.Errorf("basic_auth: userNameIsInLDAP(): unable to bind to the LDAP server as the readonly user: %s", err.Error())
+                return "", false
+        }
 
-	ok, _, err := client.Authenticate(userName, password)
-	if err != nil {
-		fmt.Printf("Error authenticating user '%s': %s\n", userName, err.Error())
-		return false
-	}
-	if !ok {
-		fmt.Printf("Authenticating failed for user '%s'\n", userName)
-		return false
-	}
-	return true
+        // Create a search request
+        searchRequest := ldap.NewSearchRequest(
+                config.Config.BasicAuth.Ldap.Base,
+                ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+                fmt.Sprintf(config.Config.BasicAuth.Ldap.UserFilter, userName),
+                []string{"dn"},
+                nil,
+        )
+
+        fmt.Printf("LDAP REQUEST: %v\n", searchRequest)
+
+        // Perform the search
+        sr, err := config.Config.BasicAuth.Ldap.LdapConn.Search(searchRequest)
+        if err != nil {
+                sysLogger.Errorf("basic_auth: userNameIsInLDAP(): LDAP searching error: %s", err.Error())
+                return "", false
+        }
+
+        // Nothing has been found
+        if len(sr.Entries) == 0 {
+                sysLogger.Debugf("basic_auth: userNameIsInLDAP(): no user '%s' in the LDAP database", userName)
+                return "", false
+        }
+
+        // Too much has been found
+        if len(sr.Entries) > 1 {
+                sysLogger.Debugf("basic_auth: userNameIsInLDAP(): more then 1 occurence with the given filter '%s' have been found in the LDAP database", userName)
+                return "", false
+        }
+
+        // Exacty what we were looking for
+        sysLogger.Debugf("basic_auth: userNameIsInLDAP(): user '%s' has been found in the LDAP database", userName)
+        return sr.Entries[0].DN, true
 }
 
-func parseRsaPublicKeyFromPemStr(pubPEMlocation string) *rsa.PublicKey {
-	pub_read_in, err := ioutil.ReadFile(pubPEMlocation)
-	if err != nil {
-		fmt.Printf("Could not read from file.\n")
-		return nil
-	}
+func FilteredByPerimter(clientReq *http.Request) bool {
+    host, _, err := net.SplitHostPort(clientReq.RemoteAddr)
+    if err != nil {
+        return true
+    }
 
-	block, _ := pem.Decode(pub_read_in)
-	if block == nil {
-		fmt.Printf("Could not decode the read in block.\n")
-		return nil
-	}
+    for _, trustedNetwork := range config.Config.BasicAuth.Perimeter.TrustedIPNetworks {
+        if trustedNetwork.Contains(net.ParseIP(host)) {
+            return false
+        }
+    }
 
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		fmt.Printf("Could not Parse pub key")
-		return nil
-	}
-
-	return pub.(*rsa.PublicKey)
+    return true
 }
 
 // Just for LCN paper
