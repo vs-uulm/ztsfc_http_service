@@ -104,7 +104,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if !config.Config.Service.File {
-		fmt.Fprintf(w, "1")
+		fmt.Fprintf(w, webpage)
 	} else {
 		w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote("bigfile"))
 		w.Header().Set("Content-Type", "application/octet-stream")
