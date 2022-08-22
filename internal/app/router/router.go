@@ -23,8 +23,8 @@ type Router struct {
 	tlsConfig *tls.Config
 	frontend  *http.Server
 	sysLogger *logger.Logger
-//	mode      string
-//	file      bool
+	//	mode      string
+	//	file      bool
 	//    md         *metadata.Cp_metadata
 	// PACKET ARRIVAL
 	//requestReception *logrus.Logger
@@ -34,8 +34,8 @@ type Router struct {
 func NewRouter(logger *logger.Logger, mode string, file bool) (*Router, error) {
 	router := new(Router)
 	router.sysLogger = logger
-//	router.mode = mode
-//	router.file = file
+	//	router.mode = mode
+	//	router.file = file
 
 	// Create a tls.Config struct to accept incoming connections
 	router.tlsConfig = &tls.Config{
@@ -91,10 +91,10 @@ func (router *Router) SetUpSFC() bool {
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Check if user is already authenticated
 	if config.Config.Service.Mode == "direct" {
-        if config.Config.BasicAuth.Perimeter.ApplyPerimeter && bauth.FilteredByPerimter(req) {
-            router.sysLogger.Infof("Request from '%s' has been dropped due to a perimeter filter rule", req.RemoteAddr)
-            return
-        }
+		if config.Config.BasicAuth.Perimeter.ApplyPerimeter && bauth.FilteredByPerimter(req) {
+			router.sysLogger.Infof("Request from '%s' has been dropped due to a perimeter filter rule", req.RemoteAddr)
+			return
+		}
 
 		if !bauth.UserSessionsIsValid(req) {
 			if !bauth.BasicAuth(router.sysLogger, w, req) {
@@ -104,7 +104,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if !config.Config.Service.File {
-		fmt.Fprintf(w, "1")
+		webpage := `1`
+		fmt.Fprintf(w, webpage)
 	} else {
 		w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote("bigfile"))
 		w.Header().Set("Content-Type", "application/octet-stream")
